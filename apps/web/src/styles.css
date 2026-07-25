@@ -1,0 +1,352 @@
+@import "tailwindcss";
+
+/* Scan Angular templates and component TS for class names. */
+@source "./**/*.{html,ts}";
+
+/*
+ * Keepsake design system — ported from the "Sluice" operator aesthetic.
+ * A monochrome, duotone system:
+ *   - light "editorial shell"  (cream/ink) for reading views (ledger, audit, pitr, admin)
+ *   - dark  "machine" panels   (black/glass) for action & live views (login, post, integrity monitor)
+ * Fonts are loaded from Google Fonts in index.html (no next/font here).
+ */
+
+:root {
+  --font-oxanium: "Oxanium";
+  --font-manrope: "Manrope";
+  --font-ibm-plex-mono: "IBM Plex Mono";
+}
+
+@theme {
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-ui: var(--font-manrope), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-body: var(--font-manrope), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-control: var(--font-oxanium), var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-ibm-plex-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-display: var(--font-oxanium), var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-number: var(--font-ibm-plex-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --text-loading-title: 90px;
+  --text-hero-title: 64px;
+  --text-dashboard-title: 48px;
+  --text-panel-heading: 28px;
+  --text-section-label: 12px;
+  --text-body-copy: 15px;
+  --text-metric: 52px;
+  --text-small-caption: 11px;
+
+  /* Inverted neutral ramp: 50 = darkest, 900 = lightest (so text-neutral-900 is near-white on dark machine). */
+  --color-neutral-50: #050505;
+  --color-neutral-100: #0b0b0b;
+  --color-neutral-200: #141414;
+  --color-neutral-300: #242424;
+  --color-neutral-400: #525252;
+  --color-neutral-500: #8a8a8a;
+  --color-neutral-600: #bdbdbd;
+  --color-neutral-700: #d6d6d6;
+  --color-neutral-800: #ededed;
+  --color-neutral-900: #fafafa;
+
+  /* Dark "machine" surfaces. */
+  --color-surface: #000000;
+  --color-surface-container: #0b0b0b;
+  --color-surface-container-high: #161616;
+  --color-outline: #242424;
+  --color-outline-variant: #363636;
+  --color-ink: #fafafa;
+  --color-ink-muted: #9b9b9b;
+
+  --color-accent-500: #303030;
+  --color-accent-600: #454545;
+  --color-accent-700: #f5f5f5;
+
+  /* Semantic tones — near-monochrome by design (meaning carried by shape/label, not hue). */
+  --color-success-50: #111111;
+  --color-success-500: #f5f5f5;
+  --color-success-700: #ffffff;
+  --color-warning-50: #121212;
+  --color-warning-500: #b8b8b8;
+  --color-warning-700: #f0f0f0;
+  --color-danger-50: #0d0d0d;
+  --color-danger-500: #777777;
+  --color-danger-700: #d8d8d8;
+  --color-info-50: #101010;
+  --color-info-500: #d4d4d4;
+  --color-info-700: #ffffff;
+
+  /* Light "editorial shell" surfaces. */
+  --color-shell: #f6f6f2;
+  --color-shell-muted: #efefea;
+  --color-panel: #fafaf8;
+  --color-line: #d8d8d2;
+  --color-ink-editorial: #101010;
+  --color-copy: #6d6d6d;
+  --color-faint: #999999;
+  --color-machine: #0a0a0a;
+  --color-machine-panel: #101010;
+  --color-machine-panel-high: #151515;
+  --color-ink-hover: #262626;
+
+  /* Signal colors — the one place we allow a whisper of hue, for financial state. */
+  --color-positive: #1f5f43;
+  --color-negative: #8a1c1c;
+
+  --radius-md: 28px;
+  --radius-lg: 28px;
+  --radius-xl: 28px;
+  --radius-app: 28px;
+  --radius-shell: 36px;
+
+  --animate-shimmer: shimmer 2s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@layer base {
+  @media (max-width: 639px) {
+    :root {
+      --radius-md: 22px;
+      --radius-lg: 22px;
+      --radius-xl: 22px;
+      --radius-app: 22px;
+      --radius-shell: 26px;
+      --text-dashboard-title: 38px;
+      --text-panel-heading: 24px;
+      --text-body-copy: 14px;
+      --text-metric: 42px;
+    }
+  }
+
+  html,
+  body {
+    margin: 0;
+    min-height: 100%;
+  }
+
+  body {
+    background: var(--color-shell-muted);
+    color: var(--color-ink-editorial);
+    font-family: var(--font-ui);
+    font-size: var(--text-body-copy);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
+  }
+
+  :where(p, span, li, td, th, label, input, textarea, select, button, a) {
+    font-family: var(--font-body);
+  }
+
+  :where(button, [role='button'], nav, kbd) {
+    font-family: var(--font-control);
+  }
+
+  :where(button, a[href], [role='button']) {
+    cursor: pointer;
+  }
+
+  :where(button:disabled, [aria-disabled='true']) {
+    cursor: not-allowed;
+  }
+
+  .tabular,
+  .tabular-nums,
+  [data-numeric] {
+    font-family: var(--font-number);
+    font-feature-settings: 'tnum' on, 'lnum' on;
+  }
+
+  /* Headings read in Manrope (quiet, professional). Oxanium is reserved for the
+     brand wordmark and rare hero accents via [data-display]. */
+  :where(h1, h2, h3, [data-heading]) {
+    font-family: var(--font-ui);
+    letter-spacing: -0.02em;
+  }
+
+  [data-display] {
+    font-family: var(--font-display);
+    letter-spacing: -0.04em;
+  }
+
+  /* Tiny mono eyebrow — reserved for breadcrumbs / small kickers only. */
+  [data-label] {
+    font-family: var(--font-mono);
+    font-size: var(--text-section-label);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  [data-caption] {
+    font-family: var(--font-body);
+    font-size: var(--text-small-caption);
+  }
+
+  [data-metric] {
+    font-family: var(--font-mono);
+    font-size: var(--text-metric);
+    font-feature-settings: 'tnum' on, 'lnum' on;
+    letter-spacing: -0.04em;
+  }
+
+  *:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--color-ink-editorial) 78%, transparent);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: rgba(16, 16, 16, 0.92);
+    color: #fafaf8;
+  }
+
+  /* Consistent, visible-but-subordinate placeholders on both surfaces. */
+  ::placeholder {
+    color: var(--color-faint);
+    opacity: 1;
+  }
+  .machine ::placeholder {
+    color: #7f8085;
+    opacity: 1;
+  }
+
+  /* Professional focus treatment for fields: no hard outline, a soft ring instead. */
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: none;
+    border-color: var(--color-ink-editorial);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-ink-editorial) 12%, transparent);
+  }
+  .machine input:focus-visible,
+  .machine select:focus-visible,
+  .machine textarea:focus-visible {
+    outline: none;
+    border-color: #6c6c72;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.07);
+  }
+
+  /* Dark "machine" regions flip the color scheme so native controls render dark. */
+  .machine {
+    color-scheme: dark;
+    color: var(--color-ink);
+  }
+  .machine *:focus-visible {
+    outline-color: rgba(255, 255, 255, 0.78);
+  }
+  .machine ::selection {
+    background: rgba(250, 250, 248, 0.9);
+    color: #0a0a0a;
+  }
+}
+
+@layer components {
+  /* ---- Magnetic hover: surface-aware invert + subtle cursor nudge.
+     The MagneticFillDirective sets --mag-fill / --mag-text / --mag-border per
+     element (based on whether it sits on a dark or light surface), toggles
+     [data-mag='on'] on hover, and drives --mag-tx / --mag-ty toward the cursor.
+     Colours flip together, so the label is never left mid-sweep on the fill. ---- */
+  :where(button:not([data-no-magnetic]), a[href]:not([data-no-magnetic]), [role='button']:not([data-no-magnetic])) {
+    --mag-tx: 0px;
+    --mag-ty: 0px;
+    transform: translate(var(--mag-tx), var(--mag-ty));
+    transition:
+      transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
+      background-color 220ms ease,
+      color 220ms ease,
+      border-color 220ms ease !important;
+  }
+
+  [data-mag='on'] {
+    background-color: var(--mag-fill) !important;
+    border-color: var(--mag-border) !important;
+    color: var(--mag-text) !important;
+  }
+  [data-mag='on'] :where(*) {
+    color: var(--mag-text) !important;
+  }
+  [data-mag='on'] :where(svg, svg *) {
+    stroke: currentColor !important;
+  }
+
+  /* ---- Custom scrollbar for the editorial shell ---- */
+  .operator-scrollbar {
+    scrollbar-color: #101010 transparent;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+  }
+  .operator-scrollbar::-webkit-scrollbar { height: 14px; width: 14px; }
+  .operator-scrollbar::-webkit-scrollbar-track {
+    background:
+      linear-gradient(90deg, transparent 0 5px, #d8d8d2 5px 6px, transparent 6px 100%),
+      #f6f6f2;
+  }
+  .operator-scrollbar::-webkit-scrollbar-thumb {
+    background: #101010;
+    border: 4px solid #f6f6f2;
+    border-radius: 999px;
+    min-height: 56px;
+  }
+  .operator-scrollbar::-webkit-scrollbar-thumb:hover { background: #3a3a3a; }
+  .operator-scrollbar::-webkit-scrollbar-corner,
+  .operator-scrollbar::-webkit-scrollbar-button { display: none; height: 0; width: 0; }
+
+  /* ---- Scrollbar for dark machine surfaces ---- */
+  .machine-scrollbar {
+    scrollbar-color: rgba(255, 255, 255, 0.38) rgba(255, 255, 255, 0.055);
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+  }
+  .machine-scrollbar::-webkit-scrollbar { height: 10px; width: 10px; }
+  .machine-scrollbar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid rgba(255, 255, 255, 0.055);
+    border-radius: 999px;
+  }
+  .machine-scrollbar::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.56), rgba(255, 255, 255, 0.22));
+    border: 2px solid rgba(10, 10, 10, 0.84);
+    border-radius: 999px;
+  }
+  .machine-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.72); }
+
+  /* ---- Solid dark machine console (for dark panels placed ON the light shell) ---- */
+  .machine-solid {
+    background:
+      radial-gradient(120% 80% at 84% -24%, rgba(255, 255, 255, 0.055), transparent 58%),
+      #0c0c0d;
+    border: 1px solid #232326;
+    border-radius: var(--radius-app);
+    box-shadow:
+      0 24px 80px rgba(0, 0, 0, 0.42),
+      inset 0 1px 0 rgba(255, 255, 255, 0.045);
+  }
+
+  /* ---- Glassy dark machine card (for dark panels ON a dark backdrop, e.g. login) ---- */
+  .machine-card {
+    background:
+      radial-gradient(circle at 18% 0%, rgba(255, 255, 255, 0.12), transparent 30%),
+      linear-gradient(145deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.018) 52%, rgba(255, 255, 255, 0.045)),
+      rgba(22, 22, 22, 0.55);
+    backdrop-filter: blur(28px) saturate(1.08);
+    -webkit-backdrop-filter: blur(28px) saturate(1.08);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-app);
+    box-shadow:
+      0 22px 74px rgba(0, 0, 0, 0.44),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      inset 0 -28px 72px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+  }
+
+  /* Shimmering skeleton for loading rows. */
+  .shimmer {
+    background: linear-gradient(90deg, transparent, rgba(16, 16, 16, 0.06), transparent);
+    background-size: 200% 100%;
+    animation: var(--animate-shimmer);
+  }
+  .machine .shimmer {
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+    background-size: 200% 100%;
+  }
+}

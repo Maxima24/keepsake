@@ -1,0 +1,235 @@
+// Keepsake — double-entry ledger schema (Prisma 7).
+// Money is stored as integers (minor units, e.g. kobo/cents). Never floats.
+// `amount` is always POSITIVE; `direction` ('debit' | 'credit') determines sign.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  // NestJS runs as CommonJS, so emit a CJS-compatible client.
+  moduleFormat = "cjs"
+  runtime      = "nodejs"
+}
+
+// Prisma 7: the connection URL lives in prisma.config.ts, not here.
+datasource db {
+  provider = "postgresql"
+}
+
+model Account {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  balance   Int      @default(0) // cached minor units; reconciliation checks this
+  createdAt DateTime @default(now())
+  entries   Entry[]
+}
+
+model Transaction {
+  id          String   @id @default(uuid())
+  description String
+  createdAt   DateTime @default(now())
+  entries     Entry[]
+}
+
+model Entry {
+  id            String      @id @default(uuid())
+  transactionId String
+  transaction   Transaction @relation(fields: [transactionId], references: [id])
+  accountId     String
+  account       Account     @relation(fields: [accountId], references: [id])
+  direction     String // 'debit' | 'credit'
+  amount        Int // positive minor units
+  createdAt     DateTime    @default(now())
+
+  @@index([accountId])
+  @@index([transactionId])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  seq       BigInt   @unique @default(autoincrement()) // chain order (do not rely on createdAt alone)
+  entity    String // 'transaction' | 'user' | ...
+  entityId  String
+  action    String // 'created' | 'role_changed' | ...
+  actorId   String? // authenticated user who caused the change (null = system/legacy)
+  actor     User?    @relation(fields: [actorId], references: [id])
+  snapshot  Json
+  prevHash  String? // hash of the previous chain row (null at genesis)
+  hash      String?  @unique // sha256(canonical(content) + (prevHash ?? "GENESIS"))
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([actorId])
+}
+
+enum Role {
+  admin
+  accountant
+  auditor
+  viewer
+  service // machine identity behind an API key (ingestion)
+}
+
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  passwordHash String
+  role         Role       @default(viewer)
+  disabled     Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+  auditLogs    AuditLog[]
+}
+
+// Single-row policy. auditRetentionDays null/<=0 => retain everything (archival off).
+model RetentionPolicy {
+  id                 String   @id @default("default")
+  auditRetentionDays Int?
+  updatedAt          DateTime @updatedAt
+  updatedBy          String?
+}
+
+// Archived audit rows are copied here (with their original hashes) BEFORE pruning
+// the live chain, so the archived prefix stays independently verifiable.
+model AuditArchive {
+  id         String   @id
+  seq        BigInt   @unique
+  entity     String
+  entityId   String
+  action     String
+  actorId    String?
+  snapshot   Json
+  prevHash   String?
+  hash       String?  @unique
+  createdAt  DateTime
+  archivedAt DateTime @default(now())
+}
+
+// ===========================================================================
+// Ingestion & Reconciliation
+// Keepsake sits beside a fintech's real ledger. Two record streams come in:
+//   Source A (kind='ledger')       — the fintech's own ledger, mirrored here.
+//   Source B (kind='counterparty') — an independent record (bank/processor CSV).
+// The matching engine proves they agree, or shows exactly where they don't.
+// ===========================================================================
+
+// A registered origin of data (a ledger mirror or a counterparty feed).
+model IngestSource {
+  id        String   @id @default(uuid())
+  name      String   @unique // 'core-ledger', 'access-bank'
+  kind      String // 'ledger' (A) | 'counterparty' (B)
+  mapping   Json? // mapping profile (account + field mapping); versioned via audit
+  createdAt DateTime @default(now())
+
+  ingested IngestedTransaction[]
+  records  CounterpartyRecord[]
+  files    IngestFile[]
+}
+
+// Source A: a transaction the fintech recorded, mirrored into Keepsake and
+// (when accounts resolve) posted into the real ledger via `transactionId`.
+model IngestedTransaction {
+  id            String       @id @default(uuid())
+  sourceId      String
+  source        IngestSource @relation(fields: [sourceId], references: [id])
+  externalId    String // THEIR id — the idempotency + join key
+  reference     String? // used for external matching
+  occurredAt    DateTime
+  description   String?
+  transactionId String? // FK (plain) to the ledger Transaction mirror, if posted
+  amount        Int // total transaction amount (minor units) for matching
+  direction     String // net direction for matching ('debit' | 'credit')
+  matchState    String       @default("unmatched") // unmatched|matched|amount_mismatch|duplicate
+  needsMapping  Boolean      @default(false) // true if an account could not be resolved
+  metadata      Json?
+  createdAt     DateTime     @default(now())
+
+  @@unique([sourceId, externalId]) // idempotency
+  @@index([reference])
+  @@index([matchState])
+  @@index([amount, occurredAt])
+}
+
+// Source B: one row of a counterparty batch file (the independent record).
+model CounterpartyRecord {
+  id         String       @id @default(uuid())
+  fileId     String
+  file       IngestFile   @relation(fields: [fileId], references: [id])
+  sourceId   String
+  source     IngestSource @relation(fields: [sourceId], references: [id])
+  reference  String?
+  amount     Int // minor units
+  direction  String
+  valueDate  DateTime
+  rawRow     Json // the original row, always preserved for auditors
+  matchState String       @default("unmatched")
+  createdAt  DateTime     @default(now())
+
+  @@index([reference])
+  @@index([amount, valueDate])
+  @@index([matchState])
+}
+
+// A counterparty file upload (Source B ingestion unit).
+model IngestFile {
+  id          String       @id @default(uuid())
+  sourceId    String
+  source      IngestSource @relation(fields: [sourceId], references: [id])
+  filename    String
+  contentHash String       @unique // sha256 of the uploaded bytes; prevents re-import
+  rowCount    Int          @default(0)
+  errorCount  Int          @default(0)
+  status      String       @default("received") // received|parsed|reconciled|failed
+  errors      Json? // per-row parse errors
+  createdAt   DateTime     @default(now())
+
+  records CounterpartyRecord[]
+}
+
+// One reconciliation pass over a window of Source A vs Source B.
+model ReconciliationRun {
+  id         String   @id @default(uuid())
+  sourceAId  String
+  sourceBId  String
+  windowFrom DateTime
+  windowTo   DateTime
+  reconciled Boolean  @default(false)
+  summary    Json // counts per outcome, value matched/broken
+  exportHash String? // sha256 of the canonical run document (offline-verifiable)
+  createdAt  DateTime @default(now())
+
+  matches Match[]
+}
+
+// A confirmed link between Source A and Source B records. `groupId` ties the
+// several rows of a many-to-one / one-to-many (settlement batch) match together.
+model Match {
+  id                   String            @id @default(uuid())
+  runId                String
+  run                  ReconciliationRun @relation(fields: [runId], references: [id])
+  sourceRecordId       String? // IngestedTransaction id (nullable for unmatched_source_b)
+  counterpartyRecordId String? // CounterpartyRecord id (nullable for unmatched_source_a)
+  outcome              String // matched|unmatched_source_a|unmatched_source_b|amount_mismatch|duplicate
+  method               String // exact_ref|ref_amount|fuzzy|aggregate
+  confidence           Int               @default(100) // 0-100
+  groupId              String? // shared across the rows of an N:1 / 1:N match
+  confirmedBy          String? // actor id if a fuzzy match was human-confirmed
+  createdAt            DateTime          @default(now())
+
+  @@index([runId])
+  @@index([groupId])
+}
+
+// An API key for machine ingestion. The plaintext is shown once; only the
+// argon2 hash is stored. Each key maps to a `service`-role User (the actor on
+// audit rows), so the hash chain and RBAC keep working unchanged.
+model ApiKey {
+  id            String    @id @default(uuid())
+  label         String
+  hash          String    @unique // argon2 hash of the secret
+  prefix        String // first chars of the key, for display ('sk_live_ab12…')
+  serviceUserId String // the service User this key authenticates as
+  disabled      Boolean   @default(false)
+  lastUsedAt    DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([serviceUserId])
+}
