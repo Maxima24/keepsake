@@ -1,0 +1,70 @@
+# Render Blueprint for Keepsake — Postgres + NestJS API + Angular static site.
+# Deploy: push this repo to GitHub, then Render → New → Blueprint → pick the repo.
+# The API URL and CORS origin are cross-wired between services, so no manual URLs.
+
+databases:
+  - name: keepsake-db
+    databaseName: keepsake
+    user: keepsake
+    plan: free # free Postgres expires 90 days after creation
+    region: oregon
+
+services:
+  # ---------------- API (NestJS + Prisma) ----------------
+  - type: web
+    name: keepsake-api
+    runtime: node
+    plan: free # sleeps after ~15 min idle; first request cold-starts
+    region: oregon
+    rootDir: .
+    # generate client → compile → apply migrations → seed demo data (idempotent).
+    # --prod=false forces devDeps (nest-cli, prisma, tsx) even though Render sets NODE_ENV=production.
+    buildCommand: >-
+      corepack enable &&
+      pnpm install --frozen-lockfile --prod=false --filter api &&
+      pnpm --filter api exec prisma generate &&
+      pnpm --filter api build &&
+      pnpm --filter api exec prisma migrate deploy &&
+      pnpm --filter api exec tsx prisma/seed.ts
+    # nest build emits to dist/src/main.js (prisma.config.ts at the api root lifts the common root).
+    startCommand: node apps/api/dist/src/main
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: keepsake-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true # Render generates a strong secret once
+      - key: WEB_ORIGIN # CORS allow-list; app-setup prepends https:// to a bare host
+        fromService:
+          type: web
+          name: keepsake-web
+          property: host
+      - key: RECONCILE_INTERVAL_MS
+        value: "300000" # 5 min in prod (dev default is 60s)
+
+  # ---------------- Web (Angular static site) ----------------
+  - type: web
+    name: keepsake-web
+    runtime: static
+    region: oregon
+    rootDir: .
+    # set-api-base bakes the API URL into the bundle before the AOT build.
+    buildCommand: >-
+      corepack enable &&
+      pnpm install --frozen-lockfile --prod=false --filter web &&
+      node apps/web/scripts/set-api-base.mjs &&
+      pnpm --filter web build
+    staticPublishPath: apps/web/dist/web/browser
+    envVars:
+      - key: API_BASE_URL # the API's hostname; the script upgrades it to https://
+        fromService:
+          type: web
+          name: keepsake-api
+          property: host
+    # SPA fallback so Angular client-side routes resolve on refresh/deep-link.
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
