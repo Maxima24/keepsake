@@ -1,0 +1,19 @@
+node_modules/
+dist/
+.turbo/
+.angular/
+coverage/
+*.log
+
+# Secrets — never commit real env files (they hold JWT_SECRET / DB creds)
+.env
+.env.*
+!.env.example
+
+# Prisma 7 generated client (regenerated on build via `prisma generate`)
+apps/api/src/generated/
+
+# Agent/editor tooling — not part of the application
+.agents/
+.claude/
+.plans/
