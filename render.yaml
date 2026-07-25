@@ -13,21 +13,11 @@ services:
   # ---------------- API (NestJS + Prisma) ----------------
   - type: web
     name: keepsake-api
-    runtime: node
+    runtime: docker
+    dockerfilePath: apps/api/Dockerfile
+    dockerContext: . # build context = repo root (the whole monorepo)
     plan: free # sleeps after ~15 min idle; first request cold-starts
     region: oregon
-    rootDir: .
-    # generate client → compile → apply migrations → seed demo data (idempotent).
-    # --prod=false forces devDeps (nest-cli, prisma, tsx) even though Render sets NODE_ENV=production.
-    buildCommand: >-
-      npm install -g pnpm@9.15.9 &&
-      pnpm install --no-frozen-lockfile --prod=false --filter api &&
-      pnpm --filter api exec prisma generate &&
-      pnpm --filter api build
-    # Migrations + seed run at STARTUP (the DB is not reachable during Render's build phase).
-    # Uses npx (not pnpm) so it doesn't depend on a global pnpm at runtime; devDeps (prisma, tsx)
-    # are present because the build installed with --prod=false. nest build emits dist/src/main.js.
-    startCommand: cd apps/api && npx prisma migrate deploy && (npx tsx prisma/seed.ts || true) && node dist/src/main
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
