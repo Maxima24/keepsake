@@ -48,7 +48,6 @@ services:
   - type: web
     name: keepsake-web
     runtime: static
-    region: oregon
     rootDir: .
     # set-api-base bakes the API URL into the bundle before the AOT build.
     buildCommand: >-
