@@ -23,11 +23,11 @@ services:
       npm install -g pnpm@9.15.9 &&
       pnpm install --no-frozen-lockfile --prod=false --filter api &&
       pnpm --filter api exec prisma generate &&
-      pnpm --filter api build &&
-      pnpm --filter api exec prisma migrate deploy &&
-      pnpm --filter api exec tsx prisma/seed.ts
-    # nest build emits to dist/src/main.js (prisma.config.ts at the api root lifts the common root).
-    startCommand: node apps/api/dist/src/main
+      pnpm --filter api build
+    # Migrations + seed run at STARTUP (the DB is not reachable during Render's build phase).
+    # Uses npx (not pnpm) so it doesn't depend on a global pnpm at runtime; devDeps (prisma, tsx)
+    # are present because the build installed with --prod=false. nest build emits dist/src/main.js.
+    startCommand: cd apps/api && npx prisma migrate deploy && (npx tsx prisma/seed.ts || true) && node dist/src/main
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
