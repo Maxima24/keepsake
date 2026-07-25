@@ -1,0 +1,147 @@
+<section class="machine mx-auto max-w-3xl">
+  <div class="machine-solid overflow-hidden">
+    <!-- Header -->
+    <div class="border-b border-[#232326] px-6 py-6 sm:px-8 sm:py-7">
+      <h1 class="text-[26px] font-semibold tracking-[-0.02em] text-neutral-900">Post a transaction</h1>
+      <p class="mt-2.5 max-w-xl text-sm leading-relaxed text-neutral-500">
+        Every transaction must balance — total debits must equal total credits. The API writes the
+        transaction, its entries, the balance updates and the audit record
+        <span class="font-medium text-neutral-300">atomically</span>, or rejects the whole thing.
+      </p>
+    </div>
+
+    <form (submit)="onSubmit($event)" class="px-6 py-6 sm:px-8 sm:py-7">
+      <!-- Description -->
+      <label class="block">
+        <span class="mb-2 block text-[13px] font-medium text-neutral-400">Description</span>
+        <input
+          type="text"
+          [value]="store.description()"
+          (input)="store.setDescription($any($event.target).value)"
+          placeholder="e.g. Cash sale"
+          class="h-11 w-full rounded-2xl border border-[#2b2b2e] bg-[#151517] px-3.5 text-sm text-neutral-900 outline-none transition focus:border-neutral-500"
+        />
+      </label>
+
+      <!-- Entry rows -->
+      <div class="mt-5 hidden gap-2 px-1 sm:grid sm:grid-cols-[2fr_1fr_1.4fr_auto]">
+        <span class="text-[12px] font-medium text-neutral-500">Account</span>
+        <span class="text-[12px] font-medium text-neutral-500">Direction</span>
+        <span class="text-[12px] font-medium text-neutral-500">Amount <span class="text-neutral-600">· minor units</span></span>
+        <span></span>
+      </div>
+
+      <div class="mt-2 space-y-2">
+        @for (entry of store.entries(); track $index) {
+          <div class="grid grid-cols-1 gap-2 sm:grid-cols-[2fr_1fr_1.4fr_auto] sm:items-start">
+            <select
+              [value]="entry.accountId"
+              (change)="store.patchEntry($index, { accountId: $any($event.target).value })"
+              class="h-11 w-full rounded-2xl border border-[#2b2b2e] bg-[#151517] px-3 text-sm text-neutral-900 outline-none transition focus:border-neutral-500"
+            >
+              <option value="" disabled>Select account…</option>
+              @for (acc of accountsQuery.data() ?? []; track acc.id) {
+                <option [value]="acc.id">{{ acc.name }}</option>
+              }
+            </select>
+
+            <select
+              [value]="entry.direction"
+              (change)="store.patchEntry($index, { direction: $any($event.target).value })"
+              class="h-11 w-full rounded-2xl border border-[#2b2b2e] bg-[#151517] px-3 text-sm font-medium text-neutral-900 outline-none transition focus:border-neutral-500"
+            >
+              <option value="debit">Debit</option>
+              <option value="credit">Credit</option>
+            </select>
+
+            <div>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                [value]="entry.amount ?? ''"
+                (input)="onAmount($index, $any($event.target).value)"
+                placeholder="0"
+                class="h-11 w-full rounded-2xl border border-[#2b2b2e] bg-[#151517] px-3.5 text-sm tabular-nums text-neutral-900 outline-none transition focus:border-neutral-500"
+              />
+              <span data-caption class="mt-1 block text-neutral-500">= {{ formatMinor(entry.amount ?? 0) }}</span>
+            </div>
+
+            <button
+              type="button"
+              (click)="store.removeEntry($index)"
+              [disabled]="store.entries().length <= 2"
+              title="Remove row"
+              class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#2b2b2e] bg-[#151517] text-neutral-500 transition hover:text-neutral-900 disabled:cursor-not-allowed disabled:opacity-35"
+            >
+              <app-icon name="x" [size]="16"></app-icon>
+            </button>
+          </div>
+        }
+      </div>
+
+      <div class="mt-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          (click)="store.addEntry('debit')"
+          class="flex items-center gap-1.5 rounded-full border border-[#2b2b2e] bg-[#151517] px-4 py-2 text-[13px] font-medium text-neutral-500 transition hover:text-neutral-900"
+        >
+          <app-icon name="plus" [size]="14"></app-icon> Add debit
+        </button>
+        <button
+          type="button"
+          (click)="store.addEntry('credit')"
+          class="flex items-center gap-1.5 rounded-full border border-[#2b2b2e] bg-[#151517] px-4 py-2 text-[13px] font-medium text-neutral-500 transition hover:text-neutral-900"
+        >
+          <app-icon name="plus" [size]="14"></app-icon> Add credit
+        </button>
+      </div>
+
+      <!-- Live balance bar: quiet + neutral until it balances, then confirms in emerald -->
+      <div
+        class="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border px-4 py-3.5 transition-colors"
+        [style.borderColor]="store.balanced() ? 'rgba(110,231,183,0.34)' : '#2b2b2e'"
+        [style.background]="store.balanced() ? 'rgba(110,231,183,0.07)' : '#141416'"
+      >
+        <div class="flex gap-6 text-sm text-neutral-500">
+          <span>Debits <span class="ml-1.5 font-semibold tabular-nums text-neutral-900">{{ formatMinor(store.debitTotal()) }}</span></span>
+          <span>Credits <span class="ml-1.5 font-semibold tabular-nums text-neutral-900">{{ formatMinor(store.creditTotal()) }}</span></span>
+        </div>
+        @if (store.balanced()) {
+          <span class="flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-semibold" style="background:rgba(110,231,183,0.16);color:#8ff0c4">
+            <app-icon name="check" [size]="14"></app-icon> Balanced
+          </span>
+        } @else {
+          <span class="flex items-center gap-2 rounded-full border border-[#34343a] px-3 py-1 text-[12px] font-medium text-neutral-500">
+            <span class="h-1.5 w-1.5 rounded-full bg-neutral-600"></span> Not balanced
+          </span>
+        }
+      </div>
+
+      <!-- Submit — lights up when the form is valid -->
+      <button
+        type="submit"
+        [disabled]="!store.canSubmit() || postMutation.isPending()"
+        class="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-neutral-500 bg-[#fafafa] text-sm font-semibold text-[#0a0a0a] transition disabled:cursor-not-allowed disabled:border-[#2b2b2e] disabled:bg-[#151517] disabled:text-neutral-600"
+      >
+        {{ postMutation.isPending() ? 'Posting…' : 'Post transaction' }}
+        @if (!postMutation.isPending()) { <app-icon name="arrow" [size]="16"></app-icon> }
+      </button>
+
+      @if (successMsg()) {
+        <div class="mt-4 flex items-start gap-2.5 rounded-2xl border px-4 py-3 text-sm"
+             style="border-color:rgba(110,231,183,0.32);background:rgba(110,231,183,0.08);color:#c9f6e0">
+          <span class="shrink-0 pt-0.5" style="color:#8ff0c4"><app-icon name="check" [size]="16"></app-icon></span>
+          <span>{{ successMsg() }}</span>
+        </div>
+      }
+      @if (errorMsg()) {
+        <div class="mt-4 flex items-start gap-2.5 rounded-2xl border px-4 py-3 text-sm"
+             style="border-color:rgba(248,165,165,0.32);background:rgba(248,165,165,0.07);color:#f6d5d5">
+          <span class="shrink-0 pt-0.5" style="color:#f7b4b4"><app-icon name="alert" [size]="16"></app-icon></span>
+          <span>{{ errorMsg() }}</span>
+        </div>
+      }
+    </form>
+  </div>
+</section>
