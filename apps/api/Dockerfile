@@ -23,8 +23,11 @@ RUN pnpm install --no-frozen-lockfile --filter api \
 # API source
 COPY apps/api ./apps/api
 
-# Generate the Prisma client + compile Nest -> dist/src/main.js
-RUN pnpm --filter api exec prisma generate \
+# Generate the Prisma client + compile Nest -> dist/src/main.js.
+# prisma.config.ts eagerly resolves DATABASE_URL; `generate` never connects, so a
+# throwaway URL lets the config load at build time. Render injects the real one at runtime.
+RUN DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder" \
+      pnpm --filter api exec prisma generate \
  && pnpm --filter api run build
 
 ENV NODE_ENV=production
