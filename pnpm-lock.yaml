@@ -233,7 +233,11 @@ importers:
         specifier: ~5.7.2
         version: 5.7.3
 
-  packages/sdk: {}
+  packages/sdk:
+    devDependencies:
+      typescript:
+        specifier: ^5.7.2
+        version: 5.7.3
 
 packages:
 
