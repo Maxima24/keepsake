@@ -1,0 +1,110 @@
+<div appMagneticFill class="h-dvh w-full overflow-hidden bg-shell-muted text-ink-editorial sm:p-4">
+  @if (store.isAuthenticated()) {
+    <div class="relative flex h-full min-w-0 overflow-hidden bg-shell sm:rounded-shell sm:border sm:border-line">
+      <!-- ===================== SIDEBAR (desktop) ===================== -->
+      <aside class="hidden w-[252px] shrink-0 flex-col px-4 py-5 lg:flex">
+        <a routerLink="/ledger" data-no-magnetic class="px-2 text-ink-editorial">
+          <app-brand-mark [wordmark]="true" tone="light" [size]="34"></app-brand-mark>
+        </a>
+
+        <p class="mt-8 px-3.5 text-[11px] font-semibold text-faint">Operations</p>
+        <nav class="mt-2 flex flex-1 flex-col gap-1">
+          @for (item of nav; track item.path) {
+            @if (item.visible()) {
+              <a
+                [routerLink]="item.path"
+                routerLinkActive="!bg-ink-editorial !text-panel !border-ink-editorial"
+                class="flex items-center gap-3 rounded-[16px] border border-transparent px-3.5 py-2.5 text-sm font-medium text-copy transition-colors hover:border-line hover:bg-shell-muted hover:text-ink-editorial"
+              >
+                <app-icon [name]="item.icon" [size]="18"></app-icon>
+                <span>{{ item.label }}</span>
+              </a>
+            }
+          }
+        </nav>
+
+        @if (store.currentUser(); as u) {
+          <div class="mt-4 flex items-center gap-3 rounded-[18px] border border-line bg-panel px-3 py-2.5">
+            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ink-editorial text-panel">
+              <app-icon name="user" [size]="15"></app-icon>
+            </span>
+            <div class="min-w-0 flex-1">
+              <p class="truncate text-[13px] font-medium text-ink-editorial">{{ u.email }}</p>
+              <p class="mt-0.5 text-[11px] font-medium capitalize text-faint">{{ u.role }}</p>
+            </div>
+          </div>
+          <button
+            (click)="logout()"
+            class="mt-2 flex items-center justify-center gap-2 rounded-[16px] border border-line bg-shell px-3 py-2.5 text-[13px] font-semibold text-copy transition-colors hover:border-ink-editorial hover:bg-ink-editorial hover:text-panel"
+          >
+            <app-icon name="logout" [size]="15"></app-icon> Sign out
+          </button>
+        }
+      </aside>
+
+      <!-- ===================== MAIN ===================== -->
+      <div class="flex min-w-0 flex-1 flex-col overflow-hidden bg-panel sm:m-2 sm:rounded-app sm:border sm:border-line lg:ml-0">
+        <!-- HEADER -->
+        <header class="relative flex h-14 shrink-0 items-center gap-3 border-b border-line px-4 sm:h-[68px] sm:px-6">
+          <a routerLink="/ledger" data-no-magnetic class="text-ink-editorial lg:hidden">
+            <app-brand-mark tone="light" [size]="30"></app-brand-mark>
+          </a>
+          <div class="hidden min-w-0 flex-col lg:flex">
+            <p data-label class="truncate text-[10px] text-faint">Keepsake / {{ area() }}</p>
+            <p class="mt-1 truncate text-xs text-copy">Double-entry ledger · append-only audit</p>
+          </div>
+
+          <div class="ml-auto flex items-center gap-2.5">
+            @if (canSeeAudit() && verifyQuery.data(); as v) {
+              @if (v.valid) {
+                <span
+                  title="Audit chain verified"
+                  class="flex items-center gap-2 rounded-full border border-line bg-shell px-3 py-1.5 text-[12px] font-semibold text-ink-editorial"
+                >
+                  <span class="h-1.5 w-1.5 rounded-full" style="background:var(--color-positive)"></span> Verified
+                </span>
+              } @else {
+                <span
+                  title="Audit chain broken"
+                  class="flex items-center gap-2 rounded-full border px-3 py-1.5 text-[12px] font-semibold"
+                  style="border-color:color-mix(in srgb,var(--color-negative) 34%,transparent);color:var(--color-negative)"
+                >
+                  <span class="h-1.5 w-1.5 rounded-full" style="background:var(--color-negative)"></span> Broken at #{{ v.brokenAtSeq }}
+                </span>
+              }
+            }
+            @if (store.currentUser(); as u) {
+              <span class="hidden rounded-full border border-line bg-shell px-3 py-1.5 text-[12px] font-medium capitalize text-copy sm:inline">{{ u.role }}</span>
+            }
+            <button (click)="logout()" class="flex h-9 w-9 items-center justify-center rounded-full border border-line bg-shell text-copy lg:hidden">
+              <app-icon name="logout" [size]="16"></app-icon>
+            </button>
+          </div>
+        </header>
+
+        <!-- MOBILE NAV (role="navigation", intentionally not a <nav> so the desktop <nav> stays the single canonical one) -->
+        <div role="navigation" class="flex gap-1.5 overflow-x-auto border-b border-line px-3 py-2 lg:hidden">
+          @for (item of nav; track item.path) {
+            @if (item.visible()) {
+              <a
+                [routerLink]="item.path"
+                routerLinkActive="!bg-ink-editorial !text-panel !border-ink-editorial"
+                class="flex shrink-0 items-center gap-2 rounded-full border border-line px-3 py-1.5 text-[13px] font-medium text-copy transition-colors hover:border-ink-editorial hover:bg-ink-editorial hover:text-panel"
+              >
+                <app-icon [name]="item.icon" [size]="15"></app-icon>
+                <span>{{ item.label }}</span>
+              </a>
+            }
+          }
+        </div>
+
+        <!-- CONTENT -->
+        <main class="operator-scrollbar min-h-0 flex-1 overflow-y-auto px-4 py-6 sm:px-8 sm:py-9">
+          <router-outlet></router-outlet>
+        </main>
+      </div>
+    </div>
+  } @else {
+    <router-outlet></router-outlet>
+  }
+</div>

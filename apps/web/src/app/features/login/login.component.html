@@ -1,0 +1,86 @@
+<div class="machine relative flex min-h-dvh w-full items-center justify-center overflow-hidden bg-[#050505] px-4 py-10">
+  <!-- ambient glow -->
+  <div
+    class="pointer-events-none absolute inset-0"
+    style="background:radial-gradient(58% 46% at 50% -4%, rgba(255,255,255,0.07), transparent 68%), radial-gradient(42% 42% at 82% 108%, rgba(255,255,255,0.045), transparent 70%)"
+  ></div>
+  <!-- faint rule grid -->
+  <div
+    class="pointer-events-none absolute inset-0 opacity-[0.04]"
+    style="background-image:linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px);background-size:64px 64px"
+  ></div>
+
+  <div class="relative w-full max-w-md">
+    <div class="mb-8 flex flex-col items-center text-center">
+      <app-brand-mark tone="dark" [size]="48"></app-brand-mark>
+      <h1 data-display class="mt-6 text-[36px] font-bold leading-none text-neutral-900">Keepsake</h1>
+      <p class="mt-3 text-[13px] font-medium tracking-[0.01em] text-neutral-500">Auditable double-entry ledger</p>
+    </div>
+
+    <div class="machine-card p-7 sm:p-8">
+      <h2 class="text-lg font-semibold text-neutral-900">Sign in</h2>
+      <p class="mt-1.5 text-sm leading-relaxed text-neutral-500">Authenticate to reach the operator console.</p>
+
+      <form (submit)="onSubmit($event)" class="mt-6 space-y-4">
+        <label class="block">
+          <span class="mb-2 block text-[13px] font-medium text-neutral-400">Email</span>
+          <div class="flex items-center gap-2.5 rounded-2xl border border-outline bg-surface-container px-3.5 transition focus-within:border-neutral-500">
+            <span class="text-neutral-500"><app-icon name="user" [size]="16"></app-icon></span>
+            <input
+              type="email"
+              [value]="email()"
+              (input)="email.set($any($event.target).value)"
+              placeholder="you@keepsake.local"
+              class="h-11 w-full bg-transparent text-sm text-neutral-900 outline-none"
+            />
+          </div>
+        </label>
+
+        <label class="block">
+          <span class="mb-2 block text-[13px] font-medium text-neutral-400">Password</span>
+          <div class="flex items-center gap-2.5 rounded-2xl border border-outline bg-surface-container px-3.5 transition focus-within:border-neutral-500">
+            <span class="text-neutral-500"><app-icon name="lock" [size]="16"></app-icon></span>
+            <input
+              type="password"
+              [value]="password()"
+              (input)="password.set($any($event.target).value)"
+              placeholder="••••••••"
+              class="h-11 w-full bg-transparent text-sm text-neutral-900 outline-none"
+            />
+          </div>
+        </label>
+
+        <button
+          type="submit"
+          [disabled]="loading()"
+          class="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-neutral-400 bg-[#fafafa] text-sm font-semibold text-[#0a0a0a] transition disabled:opacity-50"
+        >
+          {{ loading() ? 'Signing in…' : 'Sign in' }}
+          @if (!loading()) { <app-icon name="arrow" [size]="16"></app-icon> }
+        </button>
+
+        @if (error()) {
+          <div class="flex items-center gap-2.5 rounded-2xl border px-4 py-3 text-sm"
+               style="border-color:rgba(248,165,165,0.32);background:rgba(248,165,165,0.07);color:#f6d5d5">
+            <span class="shrink-0" style="color:#f7b4b4"><app-icon name="alert" [size]="16"></app-icon></span>
+            <span>{{ error() }}</span>
+          </div>
+        }
+      </form>
+    </div>
+
+    <div class="mt-5 rounded-2xl border border-outline bg-surface-container/50 px-5 py-4">
+      <p class="text-[12px] text-neutral-500">Seeded operators — password <span class="font-mono text-neutral-300">password123</span></p>
+      <div class="mt-2.5 flex flex-wrap items-center gap-1.5">
+        @for (u of ['admin', 'accountant', 'auditor', 'viewer']; track u) {
+          <button
+            type="button"
+            (click)="email.set(u + '@keepsake.local'); password.set('password123')"
+            class="rounded-full border border-outline bg-surface-container px-2.5 py-1 font-mono text-[11px] text-neutral-400 transition hover:border-neutral-500 hover:text-neutral-200"
+          >{{ u }}</button>
+        }
+        <span class="font-mono text-[11px] text-neutral-500">&#64;keepsake.local</span>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,23 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: keepsake-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: keepsake
+      POSTGRES_PASSWORD: keepsake
+      POSTGRES_DB: keepsake
+    ports:
+      # Host 5544 -> container 5432. Host 5432 is occupied by a native
+      # Windows PostgreSQL service (IPv4), so we publish on a free port.
+      - "5544:5432"
+    volumes:
+      - keepsake-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keepsake -d keepsake"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  keepsake-pgdata:
