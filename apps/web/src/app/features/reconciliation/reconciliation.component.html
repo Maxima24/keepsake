@@ -1,0 +1,210 @@
+<section class="mx-auto max-w-5xl">
+  <!-- Header -->
+  <div>
+    <h1 class="text-[28px] font-semibold tracking-[-0.02em] text-ink-editorial sm:text-[30px]">Reconciliation</h1>
+    <p class="mt-2 max-w-2xl text-sm leading-relaxed text-copy">
+      Match the fintech's ledger (Source A) against an independent counterparty record (Source B)
+      over a window. Breaks are where real money is found; every match decision is hash-chained.
+    </p>
+  </div>
+
+  <!-- Run controls -->
+  <div class="mt-6 flex flex-wrap items-end gap-3 rounded-app border border-line bg-panel p-5">
+    <label class="block">
+      <span class="mb-2 block text-[13px] font-medium text-copy">Source A · ledger</span>
+      <select [value]="sourceA()" (change)="sourceA.set($any($event.target).value)"
+        class="h-11 rounded-2xl border border-line bg-shell px-3 text-sm text-ink-editorial outline-none transition focus:border-ink-editorial">
+        <option value="" disabled>Select…</option>
+        @for (s of ledgerSources(); track s.id) { <option [value]="s.name">{{ s.name }}</option> }
+      </select>
+    </label>
+    <label class="block">
+      <span class="mb-2 block text-[13px] font-medium text-copy">Source B · counterparty</span>
+      <select [value]="sourceB()" (change)="sourceB.set($any($event.target).value)"
+        class="h-11 rounded-2xl border border-line bg-shell px-3 text-sm text-ink-editorial outline-none transition focus:border-ink-editorial">
+        <option value="" disabled>Select…</option>
+        @for (s of counterpartySources(); track s.id) { <option [value]="s.name">{{ s.name }}</option> }
+      </select>
+    </label>
+    <label class="block">
+      <span class="mb-2 block text-[13px] font-medium text-copy">From</span>
+      <input type="datetime-local" [value]="windowFrom()" (input)="windowFrom.set($any($event.target).value)"
+        class="h-11 rounded-2xl border border-line bg-shell px-3.5 text-sm text-ink-editorial outline-none transition focus:border-ink-editorial" />
+    </label>
+    <label class="block">
+      <span class="mb-2 block text-[13px] font-medium text-copy">To</span>
+      <input type="datetime-local" [value]="windowTo()" (input)="windowTo.set($any($event.target).value)"
+        class="h-11 rounded-2xl border border-line bg-shell px-3.5 text-sm text-ink-editorial outline-none transition focus:border-ink-editorial" />
+    </label>
+    @if (canRun()) {
+      <button (click)="runRecon()" [disabled]="loading()"
+        class="flex h-11 items-center gap-2 rounded-full border border-ink-editorial bg-ink-editorial px-5 text-[13px] font-semibold text-panel transition disabled:opacity-50">
+        <app-icon name="reconcile" [size]="15"></app-icon>
+        {{ loading() ? 'Reconciling…' : 'Run reconciliation' }}
+      </button>
+    }
+  </div>
+
+  @if (error()) {
+    <div class="mt-4 flex items-center gap-2.5 rounded-app border px-4 py-3 text-sm"
+         style="border-color:color-mix(in srgb,var(--color-negative) 36%,transparent);color:var(--color-negative)">
+      <app-icon name="alert" [size]="16"></app-icon> {{ error() }}
+    </div>
+  }
+
+  <!-- Recent runs (history) -->
+  @if (recentRuns().length) {
+    <div class="mt-8">
+      <div class="flex items-center gap-3">
+        <h2 class="text-sm font-semibold text-ink-editorial">Recent runs</h2>
+        <span class="rounded-full border border-line px-2 py-0.5 font-mono text-[11px] text-copy">{{ recentRuns().length }}</span>
+        <span class="h-px flex-1 bg-line"></span>
+      </div>
+      <div class="mt-4 overflow-x-auto rounded-app border border-line bg-panel">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-[11px] font-semibold uppercase tracking-[0.04em] text-faint">
+              <th class="px-4 py-2.5 text-left">When</th>
+              <th class="px-4 py-2.5 text-left">A → B</th>
+              <th class="px-4 py-2.5 text-right">Matched</th>
+              <th class="px-4 py-2.5 text-right">Breaks</th>
+              <th class="px-4 py-2.5 text-left">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (h of recentRuns(); track h.runId) {
+              <tr (click)="loadRun(h.runId)" class="cursor-pointer border-t border-line/70 transition hover:bg-shell-muted">
+                <td data-caption class="px-4 py-2.5 text-faint">{{ fmtDate(h.createdAt) }}</td>
+                <td class="px-4 py-2.5 text-ink-editorial">{{ h.sourceAName }} → {{ h.sourceBName }}</td>
+                <td class="px-4 py-2.5 text-right tabular-nums text-copy">{{ h.summary.matched }}</td>
+                <td class="px-4 py-2.5 text-right tabular-nums"
+                    [style.color]="breakCount(h.summary) > 0 ? 'var(--color-negative)' : 'var(--color-copy)'">{{ breakCount(h.summary) }}</td>
+                <td class="px-4 py-2.5">
+                  <span class="inline-flex items-center gap-1.5 text-[12px] font-medium"
+                        [style.color]="h.reconciled ? 'var(--color-copy)' : 'var(--color-negative)'">
+                    <span class="h-1.5 w-1.5 rounded-full" [style.background]="h.reconciled ? 'var(--color-positive)' : 'var(--color-negative)'"></span>
+                    {{ h.reconciled ? 'Reconciled' : 'Breaks' }}
+                  </span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  @if (run(); as r) {
+    <!-- Verdict -->
+    <div class="mt-8 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        @if (r.reconciled) {
+          <span class="flex items-center gap-2 rounded-full border border-line bg-shell px-3.5 py-1.5 text-[12px] font-semibold text-ink-editorial">
+            <span class="h-1.5 w-1.5 rounded-full" style="background:var(--color-positive)"></span> Reconciled
+          </span>
+        } @else {
+          <span class="flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-[12px] font-semibold"
+                style="border-color:color-mix(in srgb,var(--color-negative) 34%,transparent);color:var(--color-negative)">
+            <span class="h-1.5 w-1.5 rounded-full" style="background:var(--color-negative)"></span> Breaks found
+          </span>
+        }
+        <span data-caption class="text-faint">export {{ r.exportHash.slice(0, 12) }}…</span>
+      </div>
+      <button (click)="downloadRun()"
+        class="flex h-9 items-center gap-2 rounded-full border border-line bg-shell px-3.5 text-[12px] font-medium text-copy transition hover:border-ink-editorial hover:bg-ink-editorial hover:text-panel">
+        <app-icon name="download" [size]="14"></app-icon> Download run
+      </button>
+    </div>
+
+    <!-- Summary tiles -->
+    <div class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      @for (tile of [
+        { label: 'Matched', value: r.summary.matched, break: false },
+        { label: 'Unmatched A', value: r.summary.unmatched_source_a, break: true },
+        { label: 'Unmatched B', value: r.summary.unmatched_source_b, break: true },
+        { label: 'Amount mismatch', value: r.summary.amount_mismatch, break: true },
+        { label: 'Duplicate', value: r.summary.duplicate, break: true },
+        { label: 'L2 unposted', value: r.summary.l2Unposted, break: true }
+      ]; track tile.label) {
+        <div class="rounded-app border border-line bg-panel p-4">
+          <p class="text-[11px] font-medium text-faint">{{ tile.label }}</p>
+          <p class="mt-2 text-[26px] font-semibold leading-none tabular-nums"
+             [style.color]="tile.break && tile.value > 0 ? 'var(--color-negative)' : 'var(--color-ink-editorial)'">{{ tile.value }}</p>
+        </div>
+      }
+    </div>
+
+    <!-- Matches / breaks table -->
+    <div class="mt-8 flex items-center gap-3">
+      <h2 class="text-sm font-semibold text-ink-editorial">Matches &amp; breaks</h2>
+      <span class="rounded-full border border-line px-2 py-0.5 font-mono text-[11px] text-copy">{{ r.matches.length }}</span>
+      <span class="h-px flex-1 bg-line"></span>
+    </div>
+    <div class="mt-4 overflow-x-auto rounded-app border border-line bg-panel">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-[11px] font-semibold uppercase tracking-[0.04em] text-faint">
+            <th class="px-4 py-2.5 text-left">Outcome</th>
+            <th class="px-4 py-2.5 text-left">Method</th>
+            <th class="px-4 py-2.5 text-right">Conf.</th>
+            <th class="px-4 py-2.5 text-left">Source A</th>
+            <th class="px-4 py-2.5 text-left">Source B</th>
+            <th class="px-4 py-2.5 text-right"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (g of groupedMatches(); track g.key) {
+            @if (g.matches.length > 1) {
+              <tr class="border-t border-line" style="background:var(--color-shell-muted)">
+                <td colspan="6" class="px-4 py-1.5 text-[11px] font-medium text-copy">
+                  <span class="inline-flex items-center gap-1.5">
+                    <app-icon name="reconcile" [size]="12"></app-icon>
+                    Settlement batch · {{ g.matches.length }} ledger records → one counterparty line
+                  </span>
+                </td>
+              </tr>
+            }
+            @for (m of g.matches; track m.id) {
+              <tr class="border-t border-line/70">
+                <td class="px-4 py-2.5">
+                  <span class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium"
+                        [style.borderColor]="m.outcome === 'matched' ? 'var(--color-line)' : 'color-mix(in srgb,var(--color-negative) 34%,transparent)'"
+                        [style.color]="m.outcome === 'matched' ? 'var(--color-copy)' : 'var(--color-negative)'">
+                    {{ m.outcome }}
+                  </span>
+                </td>
+                <td class="px-4 py-2.5 font-mono text-[11px] text-copy">{{ m.method }}</td>
+                <td class="px-4 py-2.5 text-right tabular-nums text-copy">{{ m.confidence }}</td>
+                <td class="px-4 py-2.5">
+                  @if (aRec(m.sourceRecordId); as a) {
+                    <span class="text-ink-editorial">{{ a.reference ?? a.externalId }}</span>
+                    <span class="ml-2 tabular-nums text-faint">{{ formatMinor(a.amount) }}</span>
+                  } @else { <span class="text-faint">—</span> }
+                </td>
+                <td class="px-4 py-2.5">
+                  @if (bRec(m.counterpartyRecordId); as b) {
+                    <span class="text-ink-editorial">{{ b.reference ?? '(no ref)' }}</span>
+                    <span class="ml-2 tabular-nums text-faint">{{ formatMinor(b.amount) }}</span>
+                  } @else { <span class="text-faint">—</span> }
+                </td>
+                <td class="px-4 py-2.5 text-right">
+                  @if (canConfirm(m)) {
+                    <button (click)="confirm(m.id)"
+                      class="rounded-full border border-line bg-shell px-2.5 py-1 text-[12px] font-medium text-copy transition hover:border-ink-editorial hover:bg-ink-editorial hover:text-panel">
+                      Confirm
+                    </button>
+                  } @else if (m.confirmedBy) {
+                    <span data-caption class="text-faint">confirmed</span>
+                  }
+                </td>
+              </tr>
+            }
+          }
+          @if (r.matches.length === 0) {
+            <tr><td colspan="6" class="px-4 py-4 text-sm text-copy">No matches or breaks in this window.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

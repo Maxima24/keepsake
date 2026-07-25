@@ -1,0 +1,260 @@
+<section class="mx-auto max-w-5xl space-y-8">
+  <div>
+    <h1 class="text-[28px] font-semibold tracking-[-0.02em] text-ink-editorial sm:text-[30px]">Integrations</h1>
+    <p class="mt-2 max-w-2xl text-sm leading-relaxed text-copy">
+      Register data sources, map counterparty file formats, upload statements, and mint the
+      API keys that let a fintech push its ledger into Keepsake.
+    </p>
+    @if (message()) {
+      <div class="mt-4 flex items-center gap-2.5 rounded-app border border-line bg-panel px-4 py-3 text-sm text-ink-editorial">
+        <app-icon name="check" [size]="16"></app-icon> {{ message() }}
+      </div>
+    }
+    @if (error()) {
+      <div class="mt-4 flex items-center gap-2.5 rounded-app border px-4 py-3 text-sm"
+           style="border-color:color-mix(in srgb,var(--color-negative) 36%,transparent);color:var(--color-negative)">
+        <app-icon name="alert" [size]="16"></app-icon> {{ error() }}
+      </div>
+    }
+  </div>
+
+  <!-- Sources -->
+  <div>
+    <div class="flex items-center gap-3">
+      <h2 class="text-sm font-semibold text-ink-editorial">Sources</h2>
+      <span class="h-px flex-1 bg-line"></span>
+    </div>
+    <div class="mt-4 overflow-x-auto rounded-app border border-line bg-panel">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-[11px] font-semibold uppercase tracking-[0.04em] text-faint">
+            <th class="px-5 py-2.5 text-left">Name</th>
+            <th class="px-5 py-2.5 text-left">Kind</th>
+            <th class="px-5 py-2.5 text-left">Mapping</th>
+            <th class="px-5 py-2.5 text-left">Registered</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (s of sources(); track s.id) {
+            <tr class="border-t border-line/70">
+              <td class="px-5 py-3 text-ink-editorial">{{ s.name }}</td>
+              <td class="px-5 py-3 capitalize text-copy">{{ s.kind }}</td>
+              <td class="px-5 py-3">
+                <span class="rounded-full border border-line px-2 py-0.5 text-[11px] font-medium text-copy">{{ s.hasMapping ? 'set' : '—' }}</span>
+              </td>
+              <td data-caption class="px-5 py-3 text-faint">{{ fmtDate(s.createdAt) }}</td>
+            </tr>
+          }
+          @if (sources().length === 0) {
+            <tr><td colspan="4" class="px-5 py-4 text-sm text-copy">No sources yet.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="mt-3 flex flex-wrap items-end gap-3">
+      <label class="block">
+        <span class="mb-2 block text-[13px] font-medium text-copy">New source name</span>
+        <input [value]="newSourceName()" (input)="newSourceName.set($any($event.target).value)" placeholder="e.g. access-bank"
+          class="h-11 w-56 rounded-2xl border border-line bg-shell px-3.5 text-sm text-ink-editorial outline-none transition focus:border-ink-editorial" />
+      </label>
+      <label class="block">
+        <span class="mb-2 block text-[13px] font-medium text-copy">Kind</span>
+        <select [value]="newSourceKind()" (change)="newSourceKind.set($any($event.target).value)"
+          class="h-11 rounded-2xl border border-line bg-shell px-3 text-sm text-ink-editorial outline-none transition focus:border-ink-editorial">
+          <option value="counterparty">counterparty</option>
+          <option value="ledger">ledger</option>
+        </select>
+      </label>
+      <button (click)="createSource()"
+        class="flex h-11 items-center gap-2 rounded-full border border-ink-editorial bg-ink-editorial px-5 text-[13px] font-semibold text-panel transition">
+        <app-icon name="plus" [size]="15"></app-icon> Add source
+      </button>
+    </div>
+  </div>
+
+  <!-- Mapping -->
+  <div>
+    <div class="flex items-center gap-3">
+      <h2 class="text-sm font-semibold text-ink-editorial">Counterparty mapping profile</h2>
+      <span class="h-px flex-1 bg-line"></span>
+    </div>
+    <div class="mt-4 rounded-app border border-line bg-panel p-5">
+      <label class="block">
+        <span class="mb-2 block text-[13px] font-medium text-copy">Source</span>
+        <select [value]="mappingSourceId()" (change)="mappingSourceId.set($any($event.target).value)"
+          class="h-11 rounded-2xl border border-line bg-shell px-3 text-sm text-ink-editorial outline-none transition focus:border-ink-editorial">
+          <option value="" disabled>Select a counterparty source…</option>
+          @for (s of counterpartySources(); track s.id) { <option [value]="s.id">{{ s.name }}</option> }
+        </select>
+      </label>
+      <textarea [value]="mappingJson()" (input)="mappingJson.set($any($event.target).value)" rows="12" spellcheck="false"
+        class="mt-3 w-full rounded-2xl border border-line bg-shell px-3.5 py-3 font-mono text-[12px] text-ink-editorial outline-none transition focus:border-ink-editorial"></textarea>
+      <button (click)="saveMapping()"
+        class="mt-3 flex h-11 items-center gap-2 rounded-full border border-ink-editorial bg-ink-editorial px-5 text-[13px] font-semibold text-panel transition">
+        <app-icon name="check" [size]="15"></app-icon> Save mapping
+      </button>
+    </div>
+  </div>
+
+  <!-- Upload -->
+  <div>
+    <div class="flex items-center gap-3">
+      <h2 class="text-sm font-semibold text-ink-editorial">Upload counterparty file</h2>
+      <span class="h-px flex-1 bg-line"></span>
+    </div>
+    <div class="mt-4 flex flex-wrap items-end gap-3 rounded-app border border-line bg-panel p-5">
+      <label class="block">
+        <span class="mb-2 block text-[13px] font-medium text-copy">Source</span>
+        <select [value]="uploadSource()" (change)="uploadSource.set($any($event.target).value)"
+          class="h-11 rounded-2xl border border-line bg-shell px-3 text-sm text-ink-editorial outline-none transition focus:border-ink-editorial">
+          <option value="" disabled>Select…</option>
+          @for (s of counterpartySources(); track s.id) { <option [value]="s.name">{{ s.name }}</option> }
+        </select>
+      </label>
+      <label class="block">
+        <span class="mb-2 block text-[13px] font-medium text-copy">CSV file</span>
+        <input type="file" accept=".csv,text/csv" (change)="onFile($event)"
+          class="text-sm text-copy file:mr-3 file:rounded-full file:border file:border-line file:bg-shell file:px-3 file:py-1.5 file:text-[12px] file:font-medium file:text-copy" />
+      </label>
+      <button (click)="upload()"
+        class="flex h-11 items-center gap-2 rounded-full border border-line bg-shell px-4 text-[13px] font-semibold text-copy transition hover:border-ink-editorial hover:bg-ink-editorial hover:text-panel">
+        <app-icon name="upload" [size]="15"></app-icon> Upload
+      </button>
+      @if (uploadResult(); as u) {
+        <span data-caption class="text-faint">{{ u.filename }} · {{ u.rowCount }} rows · {{ u.errorCount }} errors · {{ u.status }}</span>
+      }
+    </div>
+
+    @if (uploadResult(); as u) {
+      @if (u.errors.length) {
+        <div class="mt-3 overflow-x-auto rounded-app border px-0 py-0"
+             style="border-color:color-mix(in srgb,var(--color-negative) 30%,transparent)">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-[11px] font-semibold uppercase tracking-[0.04em] text-faint">
+                <th class="px-5 py-2.5 text-left">Row</th>
+                <th class="px-5 py-2.5 text-left">Error</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (e of u.errors; track e.row) {
+                <tr class="border-t border-line/70">
+                  <td class="px-5 py-2 font-mono text-[12px] text-copy">#{{ e.row }}</td>
+                  <td class="px-5 py-2" style="color:var(--color-negative)">{{ e.error }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    }
+  </div>
+
+  <!-- Needs mapping -->
+  @if (needsMapping().length) {
+    <div>
+      <div class="flex items-center gap-3">
+        <h2 class="text-sm font-semibold text-ink-editorial">Needs mapping</h2>
+        <span class="rounded-full border px-2 py-0.5 font-mono text-[11px]"
+              style="border-color:color-mix(in srgb,var(--color-negative) 34%,transparent);color:var(--color-negative)">{{ needsMapping().length }}</span>
+        <span class="h-px flex-1 bg-line"></span>
+      </div>
+      <p class="mt-2 max-w-2xl text-[13px] leading-relaxed text-copy">
+        These Source-A records were accepted but could not resolve an account, so they were
+        <span class="font-medium text-ink-editorial">not posted to the ledger</span>. Add the missing
+        account, then re-ingest — nothing is ever silently dropped.
+      </p>
+      <div class="mt-4 overflow-x-auto rounded-app border border-line bg-panel">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-[11px] font-semibold uppercase tracking-[0.04em] text-faint">
+              <th class="px-5 py-2.5 text-left">Source</th>
+              <th class="px-5 py-2.5 text-left">External ID</th>
+              <th class="px-5 py-2.5 text-left">Reference</th>
+              <th class="px-5 py-2.5 text-right">Amount</th>
+              <th class="px-5 py-2.5 text-left">Occurred</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of needsMapping(); track r.id) {
+              <tr class="border-t border-line/70">
+                <td class="px-5 py-3 text-ink-editorial">{{ r.source }}</td>
+                <td class="px-5 py-3 font-mono text-[12px] text-copy">{{ r.externalId }}</td>
+                <td class="px-5 py-3 text-copy">{{ r.reference ?? '—' }}</td>
+                <td class="px-5 py-3 text-right tabular-nums text-ink-editorial">{{ formatMinor(r.amount) }}</td>
+                <td data-caption class="px-5 py-3 text-faint">{{ fmtDate(r.occurredAt) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- API keys -->
+  <div>
+    <div class="flex items-center gap-3">
+      <h2 class="text-sm font-semibold text-ink-editorial">API keys</h2>
+      <span class="h-px flex-1 bg-line"></span>
+    </div>
+
+    @if (mintedKey(); as k) {
+      <div class="mt-4 rounded-app border border-line bg-panel p-5">
+        <p class="text-[13px] font-medium text-ink-editorial">New key — copy it now, it is shown only once:</p>
+        <code class="mt-2 block break-all rounded-2xl border border-line bg-shell px-4 py-3 font-mono text-[13px] text-ink-editorial">{{ k.key }}</code>
+      </div>
+    }
+
+    <div class="mt-4 overflow-x-auto rounded-app border border-line bg-panel">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-[11px] font-semibold uppercase tracking-[0.04em] text-faint">
+            <th class="px-5 py-2.5 text-left">Label</th>
+            <th class="px-5 py-2.5 text-left">Key</th>
+            <th class="px-5 py-2.5 text-left">Status</th>
+            <th class="px-5 py-2.5 text-left">Last used</th>
+            <th class="px-5 py-2.5 text-right"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (k of apiKeys(); track k.id) {
+            <tr class="border-t border-line/70">
+              <td class="px-5 py-3 text-ink-editorial">{{ k.label }}</td>
+              <td class="px-5 py-3 font-mono text-[12px] text-faint">{{ k.prefix }}</td>
+              <td class="px-5 py-3">
+                <span class="inline-flex items-center gap-1.5 rounded-full border border-line px-2.5 py-0.5 text-[11px] font-medium text-copy">
+                  <span class="h-1.5 w-1.5 rounded-full" [style.background]="k.disabled ? 'var(--color-negative)' : 'var(--color-positive)'"></span>
+                  {{ k.disabled ? 'Revoked' : 'Active' }}
+                </span>
+              </td>
+              <td data-caption class="px-5 py-3 text-faint">{{ k.lastUsedAt ? fmtDate(k.lastUsedAt) : 'never' }}</td>
+              <td class="px-5 py-3 text-right">
+                @if (!k.disabled) {
+                  <button (click)="revoke(k.id)"
+                    class="rounded-full border border-line bg-shell px-2.5 py-1 text-[12px] font-medium text-copy transition hover:border-ink-editorial hover:bg-ink-editorial hover:text-panel">
+                    Revoke
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+          @if (apiKeys().length === 0) {
+            <tr><td colspan="5" class="px-5 py-4 text-sm text-copy">No API keys yet — mint one to let a service push its ledger.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div class="mt-3 flex flex-wrap items-end gap-3">
+      <label class="block">
+        <span class="mb-2 block text-[13px] font-medium text-copy">New key label</span>
+        <input [value]="newKeyLabel()" (input)="newKeyLabel.set($any($event.target).value)" placeholder="e.g. core-ledger prod"
+          class="h-11 w-56 rounded-2xl border border-line bg-shell px-3.5 text-sm text-ink-editorial outline-none transition focus:border-ink-editorial" />
+      </label>
+      <button (click)="mint()"
+        class="flex h-11 items-center gap-2 rounded-full border border-ink-editorial bg-ink-editorial px-5 text-[13px] font-semibold text-panel transition">
+        <app-icon name="key" [size]="15"></app-icon> Mint key
+      </button>
+    </div>
+  </div>
+</section>
