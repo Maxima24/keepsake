@@ -20,8 +20,8 @@ services:
     # generate client → compile → apply migrations → seed demo data (idempotent).
     # --prod=false forces devDeps (nest-cli, prisma, tsx) even though Render sets NODE_ENV=production.
     buildCommand: >-
-      corepack enable &&
-      pnpm install --frozen-lockfile --prod=false --filter api &&
+      npm install -g pnpm@9.15.9 &&
+      pnpm install --no-frozen-lockfile --prod=false --filter api &&
       pnpm --filter api exec prisma generate &&
       pnpm --filter api build &&
       pnpm --filter api exec prisma migrate deploy &&
@@ -51,8 +51,8 @@ services:
     rootDir: .
     # set-api-base bakes the API URL into the bundle before the AOT build.
     buildCommand: >-
-      corepack enable &&
-      pnpm install --frozen-lockfile --prod=false --filter web &&
+      npm install -g pnpm@9.15.9 &&
+      pnpm install --no-frozen-lockfile --prod=false --filter web &&
       node apps/web/scripts/set-api-base.mjs &&
       pnpm --filter web build
     staticPublishPath: apps/web/dist/web/browser
