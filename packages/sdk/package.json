@@ -1,5 +1,5 @@
 {
-  "name": "@keepsake/sdk",
+  "name": "keepsake-sdk",
   "version": "0.1.0",
   "description": "Keepsake ingestion client — record transactions (Source A) into the audit + reconciliation layer.",
   "type": "module",
@@ -14,10 +14,37 @@
   "files": ["dist"],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepublishOnly": "tsc -p tsconfig.json"
+  },
+  "keywords": [
+    "keepsake",
+    "ledger",
+    "double-entry",
+    "audit",
+    "reconciliation",
+    "fintech",
+    "ingestion"
+  ],
+  "author": "Steel Maxima",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Maxima24/keepsake.git",
+    "directory": "packages/sdk"
+  },
+  "homepage": "https://github.com/Maxima24/keepsake/tree/master/packages/sdk#readme",
+  "bugs": {
+    "url": "https://github.com/Maxima24/keepsake/issues"
   },
   "engines": {
     "node": ">=18"
   },
-  "license": "UNLICENSED"
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
 }

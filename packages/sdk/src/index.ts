@@ -1,7 +1,7 @@
 /**
- * @keepsake/sdk — record transactions into Keepsake (Source A).
+ * keepsake-sdk — record transactions into Keepsake (Source A).
  *
- *   import { createKeepsake } from '@keepsake/sdk';
+ *   import { createKeepsake } from 'keepsake-sdk';
  *   const keepsake = createKeepsake({ baseUrl: 'https://…', apiKey: 'sk_live_…' });
  *   await keepsake.record({
  *     externalId: 'txn_9f8a', occurredAt: new Date().toISOString(), source: 'core-ledger',
