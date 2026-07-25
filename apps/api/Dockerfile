@@ -1,6 +1,7 @@
 # Keepsake API — self-contained image (avoids Render buildpack quirks:
 # corepack signature, devDep pruning, frozen-lockfile, build-time DB access).
-FROM node:22.11.0-bookworm
+FROM node:22.13.0-bookworm
+# Node >= 22.12 is required by Prisma 7 (22.11 fails its preinstall check).
 
 WORKDIR /app
 
